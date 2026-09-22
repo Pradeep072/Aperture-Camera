@@ -1,6 +1,6 @@
 ---
 name: Feature Request
-about: Suggest an idea, enhancement, or camera capability for Iris
+about: Suggest an idea, enhancement, or camera capability for Aperture
 title: '[FEATURE] '
 labels: 'enhancement'
 assignees: ''

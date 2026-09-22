@@ -1,4 +1,4 @@
-# Iris Camera
+# Aperture Camera
 
 > A high-performance, native Android photography, document scanning, and video camera app built with modern Android development best practices.
 
@@ -12,9 +12,9 @@
 
 ## Overview
 
-**Iris** is a native Android camera application engineered from the ground up to deliver uncompromising capture quality, full camera sensor diagnostics, professional manual exposure controls, multi-mode capture (Photo, Document Scanner with perspective crop & PDF generation, Video, Pro Manual, and Dual Camera), and real-time hardware telemetry.
+**Aperture** is a native Android camera application engineered from the ground up to deliver uncompromising capture quality, full camera sensor diagnostics, professional manual exposure controls, multi-mode capture (Photo, Document Scanner with perspective crop & PDF generation, Video, Pro Manual, and Dual Camera), and real-time hardware telemetry.
 
-Iris interfaces directly with the Android **Camera2 API** and **Jetpack CameraX 1.4.1**, providing hardware-grounded lens detection, Quad-Bayer pixel binning resolution analysis, and studio-grade image processing pipeline.
+Aperture interfaces directly with the Android **Camera2 API** and **Jetpack CameraX 1.4.1**, providing hardware-grounded lens detection, Quad-Bayer pixel binning resolution analysis, and studio-grade image processing pipeline.
 
 ---
 
@@ -86,9 +86,9 @@ Iris interfaces directly with the Android **Camera2 API** and **Jetpack CameraX 
 ### 1. Build via Android Studio
 1. Clone the repository:
    ```bash
-   git clone https://github.com/your-username/IrisCamera.git
+   git clone https://github.com/your-username/ApertureCamera.git
    ```
-2. Open Android Studio and choose **Open** $\to$ select the `IrisCamera` directory.
+2. Open Android Studio and choose **Open** $\to$ select the `ApertureCamera` directory.
 3. Allow Gradle to sync the project dependencies automatically.
 4. Select your target device or emulator and press **Run** (`Shift + F10`).
 
@@ -125,9 +125,9 @@ The compiled APK will be located at:
 
 1. **OEM Auxiliary Camera Access**:
    - Some device manufacturers (e.g., certain Qualcomm / MediaTek implementations) restrict direct third-party access to auxiliary physical camera IDs (e.g., separate physical macro or ultra-wide endpoints).
-   - Iris automatically detects supported optical zoom ratios and routes requests through verified logical camera pipelines to prevent black screens.
+   - Aperture automatically detects supported optical zoom ratios and routes requests through verified logical camera pipelines to prevent black screens.
 2. **Concurrent Dual Streaming**:
-   - Simultaneous front and rear camera capture requires hardware Image Signal Processor (ISP) support exposed through `CameraManager.getConcurrentCameraIds()`. If unsupported by the device SoC, Iris clearly indicates hardware incompatibility.
+   - Simultaneous front and rear camera capture requires hardware Image Signal Processor (ISP) support exposed through `CameraManager.getConcurrentCameraIds()`. If unsupported by the device SoC, Aperture clearly indicates hardware incompatibility.
 3. **Camera2 Hardware Levels (`LEGACY` / `LIMITED` / `FULL` / `LEVEL_3`)**:
    - Devices operating in `LEGACY` mode do not support manual exposure duration or manual ISO controls in Pro mode.
 

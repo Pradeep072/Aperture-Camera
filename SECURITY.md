@@ -2,7 +2,7 @@
 
 ## Supported Versions
 
-We actively maintain and provide security updates for the latest release of **Iris Camera**:
+We actively maintain and provide security updates for the latest release of **Aperture Camera**:
 
 | Version | Supported |
 |---|:---:|
@@ -13,7 +13,7 @@ We actively maintain and provide security updates for the latest release of **Ir
 
 ## Reporting a Vulnerability
 
-We take the security of our users, their media, and their camera hardware seriously. If you discover a security vulnerability in Iris Camera (e.g. permission bypass, unauthorized file access, or memory leaks):
+We take the security of our users, their media, and their camera hardware seriously. If you discover a security vulnerability in Aperture Camera (e.g. permission bypass, unauthorized file access, or memory leaks):
 
 1. **Do NOT file a public GitHub issue.**
 2. Please report the issue privately by contacting the maintainer via GitHub Security Advisories or by emailing `pradeep.maurya@example.com` (or the repository owner's GitHub profile).

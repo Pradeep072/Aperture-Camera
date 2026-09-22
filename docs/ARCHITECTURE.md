@@ -1,12 +1,12 @@
 # Architecture Guide
 
-This document outlines the architecture, package structure, unidirectional data flow (UDF), and extension guides for **Iris Camera**.
+This document outlines the architecture, package structure, unidirectional data flow (UDF), and extension guides for **Aperture Camera**.
 
 ---
 
 ## 1. High-Level Architecture Overview
 
-Iris follows the recommended **Android Architecture Patterns** using:
+Aperture follows the recommended **Android Architecture Patterns** using:
 - **Clean Layered Separation**: Hardware Abstraction $\to$ Data / Repositories $\to$ ViewModel Layer $\to$ Jetpack Compose UI.
 - **Unidirectional Data Flow (UDF)**: UI events flow up to the `CameraViewModel`, which updates state in `StateFlow<CameraUiState>` and `StateFlow<CameraSessionState>`. The Compose UI observes these state flows reactively.
 - **Structured Concurrency**: All camera I/O, MediaStore disk writes, and document processing run in background Coroutine dispatchers (`Dispatchers.IO` / `Dispatchers.Default`).

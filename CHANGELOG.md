@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to **Iris Camera** will be documented in this file.
+All notable changes to **Aperture Camera** will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
@@ -33,7 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Torch flash mode in cyclical toggle (`OFF -> AUTO -> ON -> TORCH -> OFF`).
   - GPS geotagging with fused location provider and EXIF tags.
 - **Adaptive Launcher Icon & Branding**:
-  - Modern geometric 6-blade iris aperture vector icon and updated name to **Iris**.
+  - Modern geometric 6-blade aperture vector icon and updated name to **Aperture**.
 
 ---
 

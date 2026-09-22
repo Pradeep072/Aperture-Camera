@@ -15,10 +15,10 @@ A clear and concise description of what the bug is.
 - **Android Version**: (e.g. Android 13, Android 14)
 - **SoC / Chipset**: (e.g. Snapdragon 778G+, Tensor G3, Exynos 2200)
 - **Camera2 Hardware Level**: (e.g. FULL, LEVEL_3, LIMITED, LEGACY - can be seen in the "About Camera" screen)
-- **Iris App Version**: (e.g. v1.0.0)
+- **Aperture App Version**: (e.g. v1.0.0)
 
 ## Steps to Reproduce
-1. Open Iris Camera.
+1. Open Aperture Camera.
 2. Switch to mode '...' (e.g. Photo, Docs, Video, Pro).
 3. Tap on '...' (e.g. Shutter, Lens badge 2x).
 4. See error.

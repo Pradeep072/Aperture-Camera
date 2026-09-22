@@ -1,6 +1,6 @@
 # Third-Party Dependencies & Libraries
 
-This document lists all libraries, SDKs, and build plugins used in **Iris Camera**, derived from [`gradle/libs.versions.toml`](../gradle/libs.versions.toml) and [`app/build.gradle.kts`](../app/build.gradle.kts).
+This document lists all libraries, SDKs, and build plugins used in **Aperture Camera**, derived from [`gradle/libs.versions.toml`](../gradle/libs.versions.toml) and [`app/build.gradle.kts`](../app/build.gradle.kts).
 
 ---
 
@@ -19,7 +19,7 @@ All third-party dependencies are strictly open-source and licensed under the **A
 
 ## Detailed Dependencies Table
 
-| Library / Artifact | Version | Purpose in Iris | License | Source Repository |
+| Library / Artifact | Version | Purpose in Aperture | License | Source Repository |
 |---|---|---|---|---|
 | `androidx.core:core-ktx` | `1.15.0` | Kotlin extensions for Android core framework APIs and compat utilities | Apache 2.0 | [AndroidX Core](https://android.googlesource.com/platform/frameworks/support/+/androidx-main/core/) |
 | `androidx.lifecycle:lifecycle-runtime-ktx` | `2.8.7` | Lifecycle-aware coroutine scopes and dispatchers | Apache 2.0 | [AndroidX Lifecycle](https://android.googlesource.com/platform/frameworks/support/+/androidx-main/lifecycle/) |

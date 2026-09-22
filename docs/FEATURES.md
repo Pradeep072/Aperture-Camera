@@ -1,6 +1,6 @@
 # Implemented Features Registry
 
-This document lists every implemented feature in **Iris Camera** alongside its implementing Kotlin class and package path.
+This document lists every implemented feature in **Aperture Camera** alongside its implementing Kotlin class and package path.
 
 ---
 

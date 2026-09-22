@@ -1,6 +1,6 @@
-# Contributing to Iris Camera
+# Contributing to Aperture Camera
 
-Thank you for your interest in contributing to **Iris Camera**! We welcome contributions from the community—whether it's fixing bugs, improving documentation, adding new features, or optimizing camera performance.
+Thank you for your interest in contributing to **Aperture Camera**! We welcome contributions from the community—whether it's fixing bugs, improving documentation, adding new features, or optimizing camera performance.
 
 ---
 
@@ -13,7 +13,7 @@ All contributors are expected to adhere to our [Code of Conduct](CODE_OF_CONDUCT
 ## How Can I Contribute?
 
 ### 1. Reporting Bugs
-- Check existing [GitHub Issues](https://github.com/your-username/IrisCamera/issues) to avoid duplicates.
+- Check existing [GitHub Issues](https://github.com/your-username/ApertureCamera/issues) to avoid duplicates.
 - Use our [Bug Report Template](.github/ISSUE_TEMPLATE/bug_report.md).
 - **Mandatory Information for Camera Bugs**:
   - Device Manufacturer & Model (e.g., *Motorola Edge 30*, *Google Pixel 8*).
@@ -31,8 +31,8 @@ All contributors are expected to adhere to our [Code of Conduct](CODE_OF_CONDUCT
 1. **Fork the Repository** on GitHub.
 2. **Clone your fork locally**:
    ```bash
-   git clone https://github.com/<your-username>/IrisCamera.git
-   cd IrisCamera
+   git clone https://github.com/<your-username>/ApertureCamera.git
+   cd ApertureCamera
    ```
 3. **Create a topic branch**:
    ```bash
@@ -84,4 +84,4 @@ All contributors are expected to adhere to our [Code of Conduct](CODE_OF_CONDUCT
   - Close `ImageProxy` instances promptly in callbacks to avoid stalling the CameraX frame buffer.
   - Recycle Bitmaps or leverage Kotlin garbage collection responsibly during image processing.
 
-Thank you for helping make **Iris Camera** even better!
+Thank you for helping make **Aperture Camera** even better!

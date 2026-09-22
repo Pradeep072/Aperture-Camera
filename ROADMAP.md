@@ -1,6 +1,6 @@
 # Project Roadmap & Future Ideas
 
-This roadmap outlines planned features, enhancements, and community ideas for **Iris Camera**. Items are tagged with `good first issue`, `help wanted`, and `future milestone`.
+This roadmap outlines planned features, enhancements, and community ideas for **Aperture Camera**. Items are tagged with `good first issue`, `help wanted`, and `future milestone`.
 
 ---
 
