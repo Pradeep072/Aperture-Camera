@@ -231,9 +231,114 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
                 toggleVideoRecording()
             }
             CaptureMode.DUAL -> {
-                executePhotoCapture()
+                // Dual camera capture is triggered via triggerDualPhotoCapture from UI
+                // with access to primary & secondary preview view frames.
             }
         }
+    }
+
+    fun triggerDualPhotoCapture(
+        primaryPreviewView: PreviewView,
+        secondaryPreviewView: PreviewView,
+        isSwapped: Boolean
+    ) {
+        _uiState.value = _uiState.value.copy(
+            isCapturingPhoto = true,
+            shutterFlashTrigger = System.currentTimeMillis()
+        )
+        soundAndHapticsManager.playShutterClick(settings.value.isShutterSoundEnabled)
+
+        viewModelScope.launch {
+            try {
+                val mainView = if (isSwapped) secondaryPreviewView else primaryPreviewView
+                val pipView = if (isSwapped) primaryPreviewView else secondaryPreviewView
+
+                val mainBitmap = mainView.bitmap
+                val pipBitmap = pipView.bitmap
+
+                if (mainBitmap == null || pipBitmap == null) {
+                    _uiState.value = _uiState.value.copy(
+                        isCapturingPhoto = false,
+                        statusToastMessage = "Dual capture failed: Preview frames unavailable"
+                    )
+                    return@launch
+                }
+
+                val compositeBitmap = createDualCompositeBitmap(mainBitmap, pipBitmap)
+                val stream = java.io.ByteArrayOutputStream()
+                compositeBitmap.compress(Bitmap.CompressFormat.JPEG, 98, stream)
+                val jpegBytes = stream.toByteArray()
+
+                val location = if (settings.value.isGeotagEnabled) locationHelper.getCurrentLocation() else null
+                val savedUri = mediaStoreRepo.savePhoto(
+                    jpegBytes = jpegBytes,
+                    location = location
+                )
+
+                val thumbSample = android.graphics.BitmapFactory.Options().apply { inSampleSize = 4 }
+                val thumbBitmap = android.graphics.BitmapFactory.decodeByteArray(jpegBytes, 0, jpegBytes.size, thumbSample)
+
+                _uiState.value = _uiState.value.copy(
+                    isCapturingPhoto = false,
+                    lastCapturedThumbnail = thumbBitmap ?: compositeBitmap
+                )
+                loadLatestMedia()
+            } catch (e: Exception) {
+                e.printStackTrace()
+                _uiState.value = _uiState.value.copy(
+                    isCapturingPhoto = false,
+                    statusToastMessage = "Dual capture error: ${e.message}"
+                )
+            }
+        }
+    }
+
+    private fun createDualCompositeBitmap(
+        mainBitmap: Bitmap,
+        pipBitmap: Bitmap
+    ): Bitmap {
+        val width = mainBitmap.width
+        val height = mainBitmap.height
+        val composite = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        val canvas = android.graphics.Canvas(composite)
+
+        // 1. Draw Main Camera background
+        val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG or android.graphics.Paint.FILTER_BITMAP_FLAG)
+        canvas.drawBitmap(mainBitmap, 0f, 0f, paint)
+
+        // 2. Compute Picture-in-Picture window overlay dimensions (positioned at top-right matching UI)
+        val pipWidth = width * 0.34f
+        val pipHeight = pipWidth * (215f / 155f) // Matches DualCameraScreen 155.dp x 215.dp aspect ratio
+        val marginX = width * 0.04f
+        val marginY = height * 0.08f
+        val pipLeft = width - pipWidth - marginX
+        val pipTop = marginY
+        val pipRight = pipLeft + pipWidth
+        val pipBottom = pipTop + pipHeight
+        val cornerRadius = pipWidth * 0.12f
+
+        val pipRect = android.graphics.RectF(pipLeft, pipTop, pipRight, pipBottom)
+
+        // Clip rounded corners for secondary camera view
+        val clipPath = android.graphics.Path().apply {
+            addRoundRect(pipRect, cornerRadius, cornerRadius, android.graphics.Path.Direction.CW)
+        }
+
+        canvas.save()
+        canvas.clipPath(clipPath)
+        val srcRect = android.graphics.Rect(0, 0, pipBitmap.width, pipBitmap.height)
+        canvas.drawBitmap(pipBitmap, srcRect, pipRect, paint)
+        canvas.restore()
+
+        // 3. Draw Gold PiP Border (Matching Aperture theme #FFD600)
+        val borderPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+            style = android.graphics.Paint.Style.STROKE
+            strokeWidth = pipWidth * 0.022f
+            color = android.graphics.Color.parseColor("#FFD600")
+        }
+        canvas.drawRoundRect(pipRect, cornerRadius, cornerRadius, borderPaint)
+
+        return composite
     }
 
     private fun startCountdown(seconds: Int, onComplete: () -> Unit) {

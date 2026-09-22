@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.2.1] - 2026-09-23
+
+### Fixed
+- **Dual Camera Capture & Composite PiP Photo Generation**:
+  - Resolved `IllegalArgumentException: Not bound to a valid Camera` when triggering the shutter in Dual Camera mode.
+  - Implemented `triggerDualPhotoCapture` and `createDualCompositeBitmap` to capture and composite both primary and secondary preview frames into a single high-fidelity Picture-in-Picture JPEG with rounded corners, Aperture gold border (`#FFD600`), and EXIF metadata saved directly to MediaStore.
+- **Dual Mode Visibility & Hardware Explanation**:
+  - Always display `DUAL` mode in the bottom mode selector across all devices. On devices without concurrent multi-camera ISP hardware support, selecting `DUAL` now presents an informative explanation card detailing the vendor HAL limitation rather than omitting the tab.
+  - Hoisted `isDualSwapped` state and toggle callback in `MainCameraScreen` for seamless camera role swapping during dual capture.
+
+---
+
 ## [1.2.0] - 2026-09-22
 
 ### Added

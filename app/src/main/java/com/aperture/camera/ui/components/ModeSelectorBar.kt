@@ -25,11 +25,7 @@ fun ModeSelectorBar(
     onSelectMode: (CaptureMode) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val modes = if (isDualSupported) {
-        CaptureMode.values().toList()
-    } else {
-        listOf(CaptureMode.PHOTO, CaptureMode.DOCUMENT, CaptureMode.VIDEO, CaptureMode.PRO)
-    }
+    val modes = CaptureMode.values().toList()
 
     Row(
         modifier = modifier

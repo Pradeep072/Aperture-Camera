@@ -45,10 +45,10 @@ fun DualCameraScreen(
     isConcurrentSupported: Boolean,
     primaryPreviewView: PreviewView,
     secondaryPreviewView: PreviewView,
+    isSwapped: Boolean = false,
+    onToggleSwap: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    var isSwapped by remember { mutableStateOf(false) }
-
     if (!isConcurrentSupported) {
         Box(
             modifier = modifier
@@ -129,7 +129,7 @@ fun DualCameraScreen(
                 .size(width = 155.dp, height = 215.dp)
                 .clip(RoundedCornerShape(18.dp))
                 .border(2.5.dp, Color(0xFFFFD600), RoundedCornerShape(18.dp))
-                .clickable { isSwapped = !isSwapped }
+                .clickable { onToggleSwap() }
         ) {
             AndroidView(
                 factory = { pipView },

@@ -101,6 +101,7 @@ fun MainCameraScreen(
     var activePreviewView by remember { mutableStateOf<PreviewView?>(null) }
     val primaryDualPreviewView = remember { PreviewView(context) }
     val secondaryDualPreviewView = remember { PreviewView(context) }
+    var isDualSwapped by remember { mutableStateOf(false) }
     var lastBackPressTime by remember { androidx.compose.runtime.mutableLongStateOf(0L) }
 
     // Gallery thumbnail capture pulse animation
@@ -216,6 +217,8 @@ fun MainCameraScreen(
                 isConcurrentSupported = uiState.isDualSupported,
                 primaryPreviewView = primaryDualPreviewView,
                 secondaryPreviewView = secondaryDualPreviewView,
+                isSwapped = isDualSwapped,
+                onToggleSwap = { isDualSwapped = !isDualSwapped },
                 modifier = Modifier.fillMaxSize()
             )
         } else {
@@ -430,7 +433,21 @@ fun MainCameraScreen(
                     captureMode = uiState.captureMode,
                     isRecording = uiState.videoRecordingState is VideoRecordingState.RecordingActive,
                     isCapturing = uiState.isCapturingPhoto,
-                    onClick = { viewModel.triggerShutter() }
+                    onClick = {
+                        if (uiState.captureMode == CaptureMode.DUAL) {
+                            if (uiState.isDualSupported) {
+                                viewModel.triggerDualPhotoCapture(
+                                    primaryPreviewView = primaryDualPreviewView,
+                                    secondaryPreviewView = secondaryDualPreviewView,
+                                    isSwapped = isDualSwapped
+                                )
+                            } else {
+                                Toast.makeText(context, "Dual camera is not supported on this device hardware", Toast.LENGTH_SHORT).show()
+                            }
+                        } else {
+                            viewModel.triggerShutter()
+                        }
+                    }
                 )
 
                 // 3. Quick Flip Button

@@ -231,6 +231,7 @@ class CameraManagerController(
             secondarySurfaceProvider = secondarySurfaceProvider
         )
         currentCamera = session.primaryCamera
+        imageCaptureUseCase = session.primaryImageCapture
         return session
     }
 
