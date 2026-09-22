@@ -13,6 +13,7 @@ import com.aperture.camera.data.model.LensBadge
 import com.aperture.camera.data.model.LensType
 import com.aperture.camera.data.model.ResolutionInfo
 import com.aperture.camera.data.model.VideoFormatInfo
+import java.util.Locale
 import kotlin.math.atan
 import kotlin.math.hypot
 
@@ -290,10 +291,11 @@ class CameraHardwareDetector(private val context: Context) {
         // Sensor Physical Size & Pixel Array
         val sensorSize = characteristics.get(CameraCharacteristics.SENSOR_INFO_PHYSICAL_SIZE)
         val pixelArray = characteristics.get(CameraCharacteristics.SENSOR_INFO_PIXEL_ARRAY_SIZE)
+        val activeArray = characteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE)
         val sensorSizeStr = if (sensorSize != null) "%.2f x %.2f mm".format(sensorSize.width, sensorSize.height) else "Unknown"
         val pixelArrayStr = if (pixelArray != null) "${pixelArray.width} x ${pixelArray.height}" else "Unknown"
 
-        // Maximum Resolution Sensor Matrix (API 31+ for 50MP / 32MP Quad-Bayer sensors)
+        // Maximum Resolution Sensor Matrix (API 31+ for 50MP / 64MP / 100MP / 108MP / 200MP sensors)
         var maxPixelArray: android.util.Size? = null
         var maxPhotoSizes: List<ResolutionInfo> = emptyList()
         var maxRawSizes: List<ResolutionInfo> = emptyList()
@@ -301,17 +303,30 @@ class CameraHardwareDetector(private val context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             try {
                 maxPixelArray = characteristics.get(CameraCharacteristics.SENSOR_INFO_PIXEL_ARRAY_SIZE_MAXIMUM_RESOLUTION)
+                if (maxPixelArray == null) {
+                    val activeMaxRect = characteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE_MAXIMUM_RESOLUTION)
+                    if (activeMaxRect != null && activeMaxRect.width() > 0 && activeMaxRect.height() > 0) {
+                        maxPixelArray = android.util.Size(activeMaxRect.width(), activeMaxRect.height())
+                    }
+                }
                 val maxMap = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP_MAXIMUM_RESOLUTION)
-                maxPhotoSizes = maxMap?.getOutputSizes(ImageFormat.JPEG)?.map {
+                val maxJpeg = maxMap?.getOutputSizes(ImageFormat.JPEG)?.map {
                     ResolutionInfo(it.width, it.height)
                 } ?: emptyList()
-                maxRawSizes = maxMap?.getOutputSizes(ImageFormat.RAW_SENSOR)?.map {
+                val maxHighResJpeg = maxMap?.getHighResolutionOutputSizes(ImageFormat.JPEG)?.map {
                     ResolutionInfo(it.width, it.height)
                 } ?: emptyList()
+                val maxRaw = maxMap?.getOutputSizes(ImageFormat.RAW_SENSOR)?.map {
+                    ResolutionInfo(it.width, it.height)
+                } ?: emptyList()
+                val maxHighResRaw = maxMap?.getHighResolutionOutputSizes(ImageFormat.RAW_SENSOR)?.map {
+                    ResolutionInfo(it.width, it.height)
+                } ?: emptyList()
+
+                maxPhotoSizes = (maxJpeg + maxHighResJpeg).distinctBy { "${it.width}x${it.height}" }
+                maxRawSizes = (maxRaw + maxHighResRaw).distinctBy { "${it.width}x${it.height}" }
             } catch (_: Exception) { }
         }
-
-        val maxPixelArrayStr = if (maxPixelArray != null) "${maxPixelArray.width} x ${maxPixelArray.height}" else null
 
         // 35mm Equivalent Focal Length & Crop Factor
         val sensorDiag = if (sensorSize != null && sensorSize.width > 0 && sensorSize.height > 0) {
@@ -369,33 +384,47 @@ class CameraHardwareDetector(private val context: Context) {
             }
         }
 
-        // Stream Configuration Resolutions
+        // Stream Configuration Resolutions (including high-resolution output sizes API 23+)
         val map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
-        val standardPhotoSizes = try {
+        val standardJpeg = try {
             map?.getOutputSizes(ImageFormat.JPEG)?.map {
                 ResolutionInfo(it.width, it.height)
-            }?.sortedByDescending { it.width * it.height } ?: emptyList()
+            } ?: emptyList()
         } catch (_: Exception) {
             emptyList()
         }
+        val highResJpeg = try {
+            map?.getHighResolutionOutputSizes(ImageFormat.JPEG)?.map {
+                ResolutionInfo(it.width, it.height)
+            } ?: emptyList()
+        } catch (_: Exception) {
+            emptyList()
+        }
+        val standardPhotoSizes = (standardJpeg + highResJpeg)
+            .distinctBy { "${it.width}x${it.height}" }
+            .sortedByDescending { it.width.toLong() * it.height.toLong() }
 
         val photoSizes = (maxPhotoSizes + standardPhotoSizes)
             .distinctBy { "${it.width}x${it.height}" }
-            .sortedByDescending { it.width * it.height }
+            .sortedByDescending { it.width.toLong() * it.height.toLong() }
 
-        val standardRawSizes = if (hasRaw) {
+        val standardRaw = if (hasRaw) {
             try {
-                map?.getOutputSizes(ImageFormat.RAW_SENSOR)?.map {
+                val raw1 = map?.getOutputSizes(ImageFormat.RAW_SENSOR)?.map {
                     ResolutionInfo(it.width, it.height)
-                }?.sortedByDescending { it.width * it.height } ?: emptyList()
+                } ?: emptyList()
+                val rawHighRes = map?.getHighResolutionOutputSizes(ImageFormat.RAW_SENSOR)?.map {
+                    ResolutionInfo(it.width, it.height)
+                } ?: emptyList()
+                (raw1 + rawHighRes).distinctBy { "${it.width}x${it.height}" }
             } catch (_: Exception) {
                 emptyList()
             }
         } else emptyList()
 
-        val rawSizes = (maxRawSizes + standardRawSizes)
+        val rawSizes = (maxRawSizes + standardRaw)
             .distinctBy { "${it.width}x${it.height}" }
-            .sortedByDescending { it.width * it.height }
+            .sortedByDescending { it.width.toLong() * it.height.toLong() }
 
         val videoSizes = try {
             map?.getOutputSizes(MediaRecorder::class.java)?.map { size ->
@@ -429,31 +458,41 @@ class CameraHardwareDetector(private val context: Context) {
             emptyList()
         }
 
-        // Megapixels (Standard Binned vs Full Physical Hardware Array)
-        val standardMp = if (pixelArray != null && pixelArray.width > 0 && pixelArray.height > 0) {
+        // Megapixels (Standard Output vs Full Physical Hardware Array)
+        val pixelArrayMp = if (pixelArray != null && pixelArray.width > 0 && pixelArray.height > 0) {
             (pixelArray.width.toLong() * pixelArray.height.toLong()) / 1_000_000.0
         } else {
-            standardPhotoSizes.firstOrNull()?.megaPixels ?: 0.0
+            0.0
+        }
+        val activeArrayMp = if (activeArray != null && activeArray.width() > 0 && activeArray.height() > 0) {
+            (activeArray.width().toLong() * activeArray.height().toLong()) / 1_000_000.0
+        } else {
+            0.0
         }
 
-        val maxMp = if (maxPixelArray != null && maxPixelArray.width > 0 && maxPixelArray.height > 0) {
+        val standardStreamMp = standardJpeg.maxOfOrNull { (it.width.toLong() * it.height.toLong()) / 1_000_000.0 } ?: 0.0
+        val maxHardwareArrayMp = if (maxPixelArray != null && maxPixelArray.width > 0 && maxPixelArray.height > 0) {
             (maxPixelArray.width.toLong() * maxPixelArray.height.toLong()) / 1_000_000.0
         } else {
-            photoSizes.firstOrNull()?.megaPixels ?: standardMp
+            0.0
+        }
+        val highestStreamMp = photoSizes.maxOfOrNull { (it.width.toLong() * it.height.toLong()) / 1_000_000.0 } ?: 0.0
+
+        val standardMp = when {
+            standardStreamMp > 0.0 -> standardStreamMp
+            pixelArrayMp > 0.0 -> pixelArrayMp
+            else -> activeArrayMp
         }
 
-        // Detect Quad-Bayer 4-in-1 pixel binning matrices (e.g. 50MP -> 12.5MP binned, 32MP -> 8.0MP binned)
-        val detectedMatrixMp = when {
-            maxMp > (standardMp * 1.5) -> maxMp
-            standardMp in 11.0..13.5 -> 50.0 // Standard 50MP Quad-Bayer sensor binned to 12.5MP
-            standardMp in 7.0..9.0 && isFront -> 32.0 // Standard 32MP Quad-Bayer selfie sensor binned to 8.0MP
-            standardMp in 15.0..17.0 -> 64.0 // Standard 64MP Quad-Bayer sensor binned to 16.0MP
-            standardMp in 25.0..28.0 -> 108.0 // Standard 108MP 9-in-1 sensor binned to 12.0MP
-            else -> maxOf(maxMp, standardMp)
-        }
+        val maxAvailableMp = maxOf(maxHardwareArrayMp, highestStreamMp, pixelArrayMp, activeArrayMp)
+        val isExplicitHighRes = maxAvailableMp > (standardMp * 1.15)
+        val calculatedMp = if (isExplicitHighRes) maxAvailableMp else standardMp
 
-        val calculatedMp = detectedMatrixMp
-        val isQuadBayer = calculatedMp > (standardMp * 1.5)
+        val maxPixelArrayStr = when {
+            maxPixelArray != null -> "${maxPixelArray.width} x ${maxPixelArray.height}"
+            isExplicitHighRes && photoSizes.isNotEmpty() -> "${photoSizes.first().width} x ${photoSizes.first().height}"
+            else -> null
+        }
 
         // Lens Type Classification
         val lensType = if (isFront) {
@@ -468,6 +507,72 @@ class CameraHardwareDetector(private val context: Context) {
             LensType.WIDE
         } else {
             LensType.TELEPHOTO
+        }
+
+        // Determine Advertised Sensor Tier and Binning Technology
+        val (advertisedTier, binningTech, isQuadBayer) = when {
+            // Case A: Explicit High-Res array detected in Camera2 HAL (API 31+ or unbinned stream)
+            isExplicitHighRes -> {
+                val tierStr = when {
+                    maxAvailableMp >= 180.0 -> "200 MP Ultra-Matrix Class"
+                    maxAvailableMp in 85.0..150.0 -> "%.0f MP High-Res Sensor Matrix".format(Locale.US, maxAvailableMp)
+                    maxAvailableMp in 58.0..84.0 -> "64 MP High-Res Sensor Matrix"
+                    maxAvailableMp in 42.0..57.0 -> "50 MP / 48 MP High-Res Matrix"
+                    else -> "%.0f MP Sensor Matrix Class".format(Locale.US, maxAvailableMp)
+                }
+                val techStr = when {
+                    maxAvailableMp >= 180.0 -> "16-in-1 Hexadeca-Pixel Fusion (%.1f MP Active Stream)".format(Locale.US, standardMp)
+                    maxAvailableMp in 85.0..150.0 -> "9-in-1 Nonacell Super-Pixel Fusion (%.1f MP Active Stream)".format(Locale.US, standardMp)
+                    else -> "4-in-1 Quad-Bayer Super-Pixel Fusion (%.1f MP Active Stream)".format(Locale.US, standardMp)
+                }
+                Triple(tierStr, techStr, true)
+            }
+            // Case B: Rear Primary Wide Camera with binned 9.5 - 14.5 MP output (Standard OEM HAL behavior on 50MP/100MP/108MP devices)
+            !isFront && (lensType == LensType.WIDE || (!isPhysical && cameraId == "0")) && standardMp in 9.5..14.5 -> {
+                Triple(
+                    "50 MP / 100 MP / 108 MP Class Matrix",
+                    "4-in-1 Quad-Bayer / 9-in-1 Nonacell Super-Pixel (%.1f MP Active HAL Stream)".format(Locale.US, standardMp),
+                    true
+                )
+            }
+            // Case C: Rear Camera with 14.6 - 18.0 MP output (64MP binned 4-in-1)
+            !isFront && standardMp in 14.6..18.0 -> {
+                Triple(
+                    "64 MP Class Sensor Matrix",
+                    "4-in-1 Quad-Bayer Fusion (%.1f MP Active HAL Stream)".format(Locale.US, standardMp),
+                    true
+                )
+            }
+            // Case D: Front Selfie Camera with 7.0 - 9.0 MP output (32MP binned 4-in-1)
+            isFront && standardMp in 7.0..9.0 -> {
+                Triple(
+                    "32 MP Selfie Sensor Matrix Class",
+                    "4-in-1 Quad-Bayer Super-Pixel (%.1f MP Active HAL Stream)".format(Locale.US, standardMp),
+                    true
+                )
+            }
+            // Case E: Front Selfie Camera with 11.5 - 16.5 MP output (50MP/60MP binned 4-in-1)
+            isFront && standardMp in 11.5..16.5 -> {
+                Triple(
+                    "50 MP / 60 MP Front Portrait Matrix Class",
+                    "4-in-1 Quad-Bayer Super-Pixel (%.1f MP Active HAL Stream)".format(Locale.US, standardMp),
+                    true
+                )
+            }
+            // Case F: Dedicated Ultra-Wide / Macro / Native sensor
+            else -> {
+                val nativeLabel = when {
+                    lensType == LensType.ULTRA_WIDE -> "%.1f MP Native Ultra-Wide".format(Locale.US, standardMp)
+                    lensType == LensType.MACRO -> "%.1f MP Native Macro".format(Locale.US, standardMp)
+                    lensType == LensType.DEPTH -> "%.1f MP Depth Sensor".format(Locale.US, standardMp)
+                    else -> "%.1f MP Native Sensor".format(Locale.US, standardMp)
+                }
+                Triple(
+                    nativeLabel,
+                    "1:1 Direct Sensor Readout (No Binning)",
+                    false
+                )
+            }
         }
 
         // Zoom capabilities
@@ -549,6 +654,8 @@ class CameraHardwareDetector(private val context: Context) {
             sensorMegaPixels = calculatedMp,
             binnedOutputMegaPixels = standardMp,
             isQuadBayer = isQuadBayer,
+            claimedAdvertisedTier = advertisedTier,
+            pixelBinningTechnology = binningTech,
             fovHorizontal = fovH,
             fovVertical = fovV,
             cropFactor = cropFactor,

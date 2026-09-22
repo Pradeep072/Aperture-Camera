@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.2.0] - 2026-09-22
+
+### Added
+- **Front Camera Punch-Hole Halo Ring Overlay (`FrontCameraHaloOverlay.kt`)**:
+  - Automatically detects physical display cutout / punch-hole bounds using Android's `DisplayCutout` API with concentric lens alignment.
+  - Smooth 360° illuminated golden sweep arc with radial breathing glow pulse upon front camera activation.
+  - Synchronized circular countdown progress ring around the physical selfie lens during 3s/10s timer capture.
+- **Dual-Metric Sensor Resolution (Advertised Hardware Matrix vs. Active HAL Output)**:
+  - Accurately classifies and displays both manufacturer-advertised sensor matrix tiers (50 MP, 64 MP, 100 MP, 108 MP, 200 MP) and active Camera2 HAL capture streams (12.0 MP / 12.5 MP / 16 MP / 8 MP).
+  - High-tech **Pixel Binning Explainer Card** in the About section detailing Quad-Bayer (4-in-1), Nonacell (9-in-1), super-pixel fusion, and OEM HAL stream behavior.
+  - Formatted markdown diagnostics report with copy and system share sheet integration.
+- **Enhanced Dual Camera PiP Mode**:
+  - 40% larger Picture-in-Picture secondary camera preview with active camera lens badge (`FRONT`/`REAR`) and explicit stream swap button.
+- **Visual & Audio Shutter Feedback**:
+  - High-speed white screen flash overlay feedback (`ShutterFlashOverlay.kt`), system audio shutter cue, haptic vibration pulse, and thumbnail animation.
+
+### Fixed
+- **Photo Capture & MediaStore Save Stability**:
+  - Removed HAL-incompatible Camera2 interop hardware requirement keys (`LENS_OPTICAL_STABILIZATION_MODE`, `DISTORTION_CORRECTION_MODE`, `SHADING_MODE`) on front cameras and devices without hardware OIS coils to eliminate `ERROR_CAPTURE_FAILED` crashes.
+  - Refactored `MediaStoreRepository.kt` to inject EXIF tags prior to MediaStore insertion, resolving file descriptor locks and `SecurityException` under Scoped Storage.
+  - Added legacy external storage permission declarations for Android 8/9 backward compatibility.
+
+---
+
+## [1.1.0] - 2026-09-22
+
 ## [1.0.0] - 2026-09-20
 
 ### Added

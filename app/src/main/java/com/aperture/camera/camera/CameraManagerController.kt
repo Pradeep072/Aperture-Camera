@@ -119,7 +119,7 @@ class CameraManagerController(
         try {
             provider.unbindAll()
 
-            // 1. Build Preview with Highest Available Resolution & High-Quality ISP Extender
+            // 1. Build Preview with Highest Available Resolution
             val highResStrategy = ResolutionSelector.Builder()
                 .setResolutionStrategy(ResolutionStrategy.HIGHEST_AVAILABLE_STRATEGY)
                 .build()
@@ -128,76 +128,16 @@ class CameraManagerController(
                 .setResolutionSelector(highResStrategy)
                 .setTargetRotation(rotation)
 
-            val previewExtender = Camera2Interop.Extender(previewBuilder)
-            previewExtender.setCaptureRequestOption(
-                CaptureRequest.NOISE_REDUCTION_MODE,
-                CaptureRequest.NOISE_REDUCTION_MODE_HIGH_QUALITY
-            )
-            previewExtender.setCaptureRequestOption(
-                CaptureRequest.EDGE_MODE,
-                CaptureRequest.EDGE_MODE_HIGH_QUALITY
-            )
-            previewExtender.setCaptureRequestOption(
-                CaptureRequest.TONEMAP_MODE,
-                CaptureRequest.TONEMAP_MODE_HIGH_QUALITY
-            )
-            previewExtender.setCaptureRequestOption(
-                CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE,
-                CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE_ON
-            )
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                previewExtender.setCaptureRequestOption(
-                    CaptureRequest.DISTORTION_CORRECTION_MODE,
-                    CaptureRequest.DISTORTION_CORRECTION_MODE_HIGH_QUALITY
-                )
-            }
-
             previewUseCase = previewBuilder.build().apply {
                 setSurfaceProvider(surfaceProvider)
             }
 
-            // 2. Build ImageCapture with 100% Quality, Full Sensor Resolution & Studio ISP Pipeline
+            // 2. Build ImageCapture with High Quality & Full Sensor Resolution
             val imageCaptureBuilder = ImageCapture.Builder()
                 .setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY)
                 .setResolutionSelector(highResStrategy)
-                .setJpegQuality(100)
+                .setJpegQuality(98)
                 .setTargetRotation(rotation)
-
-            val imageExtender = Camera2Interop.Extender(imageCaptureBuilder)
-            imageExtender.setCaptureRequestOption(
-                CaptureRequest.NOISE_REDUCTION_MODE,
-                CaptureRequest.NOISE_REDUCTION_MODE_HIGH_QUALITY
-            )
-            imageExtender.setCaptureRequestOption(
-                CaptureRequest.EDGE_MODE,
-                CaptureRequest.EDGE_MODE_HIGH_QUALITY
-            )
-            imageExtender.setCaptureRequestOption(
-                CaptureRequest.COLOR_CORRECTION_MODE,
-                CaptureRequest.COLOR_CORRECTION_MODE_HIGH_QUALITY
-            )
-            imageExtender.setCaptureRequestOption(
-                CaptureRequest.TONEMAP_MODE,
-                CaptureRequest.TONEMAP_MODE_HIGH_QUALITY
-            )
-            imageExtender.setCaptureRequestOption(
-                CaptureRequest.SHADING_MODE,
-                CaptureRequest.SHADING_MODE_HIGH_QUALITY
-            )
-            imageExtender.setCaptureRequestOption(
-                CaptureRequest.HOT_PIXEL_MODE,
-                CaptureRequest.HOT_PIXEL_MODE_HIGH_QUALITY
-            )
-            imageExtender.setCaptureRequestOption(
-                CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE,
-                CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE_ON
-            )
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                imageExtender.setCaptureRequestOption(
-                    CaptureRequest.DISTORTION_CORRECTION_MODE,
-                    CaptureRequest.DISTORTION_CORRECTION_MODE_HIGH_QUALITY
-                )
-            }
 
             imageCaptureUseCase = imageCaptureBuilder.build()
 
@@ -268,6 +208,30 @@ class CameraManagerController(
             e.printStackTrace()
             _sessionState.value = _sessionState.value.copy(errorMessage = "Failed to switch lens (${badge.label}): ${e.message}")
         }
+    }
+
+    /**
+     * Binds concurrent dual cameras (front + back) for Picture-in-Picture streaming.
+     */
+    fun bindDualCamera(
+        lifecycleOwner: LifecycleOwner,
+        primarySurfaceProvider: Preview.SurfaceProvider,
+        secondarySurfaceProvider: Preview.SurfaceProvider
+    ): DualCameraSession {
+        val provider = cameraProvider ?: return DualCameraSession(
+            primaryCamera = null,
+            secondaryCamera = null,
+            isSupported = false,
+            message = "Camera provider is not initialized."
+        )
+        val session = concurrentCameraManager.bindDualCamera(
+            lifecycleOwner = lifecycleOwner,
+            cameraProvider = provider,
+            primarySurfaceProvider = primarySurfaceProvider,
+            secondarySurfaceProvider = secondarySurfaceProvider
+        )
+        currentCamera = session.primaryCamera
+        return session
     }
 
     /**
@@ -390,12 +354,20 @@ class CameraManagerController(
             cameraExecutor,
             object : ImageCapture.OnImageCapturedCallback() {
                 override fun onCaptureSuccess(image: ImageProxy) {
+                    val bytes: ByteArray
                     try {
                         val buffer: ByteBuffer = image.planes[0].buffer
-                        val bytes = ByteArray(buffer.remaining())
+                        bytes = ByteArray(buffer.remaining())
                         buffer.get(bytes)
+                    } catch (e: Exception) {
                         image.close()
+                        CoroutineScope(Dispatchers.Main).launch { onError(e) }
+                        return
+                    } finally {
+                        image.close()
+                    }
 
+                    try {
                         // Extract camera info parameters for EXIF
                         val camInfo = currentCamera?.cameraInfo
                         val currentLensBadge = _sessionState.value.currentLens
@@ -434,7 +406,6 @@ class CameraManagerController(
                             }
                         }
                     } catch (e: Exception) {
-                        image.close()
                         CoroutineScope(Dispatchers.Main).launch { onError(e) }
                     }
                 }
@@ -462,12 +433,20 @@ class CameraManagerController(
             cameraExecutor,
             object : ImageCapture.OnImageCapturedCallback() {
                 override fun onCaptureSuccess(image: ImageProxy) {
+                    val bytes: ByteArray
                     try {
                         val buffer: ByteBuffer = image.planes[0].buffer
-                        val bytes = ByteArray(buffer.remaining())
+                        bytes = ByteArray(buffer.remaining())
                         buffer.get(bytes)
+                    } catch (e: Exception) {
                         image.close()
+                        CoroutineScope(Dispatchers.Main).launch { onError(e) }
+                        return
+                    } finally {
+                        image.close()
+                    }
 
+                    try {
                         val rawBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
                         val finalBitmap = if (rawBitmap != null) {
                             decodeOrientedBitmap(rawBitmap, bytes)
@@ -479,7 +458,6 @@ class CameraManagerController(
                             onBitmapCaptured(finalBitmap)
                         }
                     } catch (e: Exception) {
-                        image.close()
                         CoroutineScope(Dispatchers.Main).launch { onError(e) }
                     }
                 }

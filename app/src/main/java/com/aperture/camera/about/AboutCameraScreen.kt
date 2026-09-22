@@ -250,9 +250,14 @@ fun AboutCameraScreen(
                         item {
                             HardwareSensorsSection(sensors = diag.hardwareSensors)
                         }
+
+                        // 5. Educational Card: 50MP / 100MP vs 12.5MP Pixel Binning Explainer
+                        item {
+                            PixelBinningExplainerCard()
+                        }
                     }
 
-                    // 5. Camera Sensors Specs Header & Filters
+                    // 6. Camera Sensors Specs Header & Filters
                     item {
                         Column {
                             Row(
@@ -846,24 +851,32 @@ private fun CameraSpecCard(
                             }
                         }
 
-                        val subtitle = if (isLogicalPipeline) {
-                            "Fuses Sensors #${spec.physicalCameraIds.joinToString(", #")} • Logical HAL ID"
-                        } else {
-                            if (spec.isQuadBayer) {
-                                "%.0f MP Quad-Bayer (%.1f MP Output) • ~%.0fmm • f/%.1f".format(
-                                    Locale.US,
-                                    spec.sensorMegaPixels,
-                                    spec.binnedOutputMegaPixels,
-                                    spec.focalLength35mm,
-                                    spec.apertures.firstOrNull() ?: 1.8f
-                                )
+                        val subtitle = buildString {
+                            if (spec.claimedAdvertisedTier.isNotBlank()) {
+                                if (spec.isQuadBayer) {
+                                    append("${spec.claimedAdvertisedTier} (%.1f MP Output) • ~%.0fmm • f/%.1f".format(
+                                        Locale.US,
+                                        spec.binnedOutputMegaPixels,
+                                        spec.focalLength35mm,
+                                        spec.apertures.firstOrNull() ?: 1.8f
+                                    ))
+                                } else {
+                                    append("${spec.claimedAdvertisedTier} • ~%.0fmm • f/%.1f".format(
+                                        Locale.US,
+                                        spec.focalLength35mm,
+                                        spec.apertures.firstOrNull() ?: 1.8f
+                                    ))
+                                }
                             } else {
-                                "%.1f MP • ~%.0fmm 35mm-eq • f/%.1f".format(
+                                append("%.1f MP Native • ~%.0fmm • f/%.1f".format(
                                     Locale.US,
                                     spec.sensorMegaPixels,
                                     spec.focalLength35mm,
                                     spec.apertures.firstOrNull() ?: 1.8f
-                                )
+                                ))
+                            }
+                            if (isLogicalPipeline && spec.physicalCameraIds.isNotEmpty()) {
+                                append(" • Fuses #${spec.physicalCameraIds.joinToString(", #")}")
                             }
                         }
                         Text(
@@ -895,12 +908,18 @@ private fun CameraSpecCard(
                     // 1. Optics & Sensor Matrix
                     SectionHeader("OPTICS & SENSOR MATRIX")
                     if (spec.isQuadBayer) {
-                        SpecDetailRow("Hardware Sensor Matrix", "%.1f MP (%s)".format(Locale.US, spec.sensorMegaPixels, spec.maxPixelArraySize ?: spec.sensorPixelArraySize))
-                        SpecDetailRow("Default Output (Binned)", "%.1f MP (%s)".format(Locale.US, spec.binnedOutputMegaPixels, spec.sensorPixelArraySize))
-                        SpecDetailRow("Pixel Binning", "4-in-1 Quad-Bayer Array")
+                        SpecDetailRow("Manufacturer Sensor Tier", spec.claimedAdvertisedTier.ifBlank { "50 MP / 100 MP Class Matrix" })
+                        if (spec.sensorMegaPixels > spec.binnedOutputMegaPixels * 1.15) {
+                            SpecDetailRow("Hardware Matrix (Raw)", "%.1f MP (%s)".format(Locale.US, spec.sensorMegaPixels, spec.maxPixelArraySize ?: spec.sensorPixelArraySize))
+                        }
+                        SpecDetailRow("Active Capture Output", "%.1f MP (%s)".format(Locale.US, spec.binnedOutputMegaPixels, spec.sensorPixelArraySize))
+                        SpecDetailRow("Super-Pixel Binning", spec.pixelBinningTechnology.ifBlank { "4-in-1 / 9-in-1 Super-Pixel Fusion" })
                     } else {
-                        SpecDetailRow("Sensor Megapixels", "%.1f MP".format(Locale.US, spec.sensorMegaPixels))
-                        SpecDetailRow("Pixel Array", spec.sensorPixelArraySize)
+                        SpecDetailRow("Sensor Resolution", spec.claimedAdvertisedTier.ifBlank { "%.1f MP Native".format(Locale.US, spec.sensorMegaPixels) })
+                        SpecDetailRow("Pixel Array (HAL)", spec.sensorPixelArraySize)
+                        if (spec.pixelBinningTechnology.isNotBlank()) {
+                            SpecDetailRow("Pixel Architecture", spec.pixelBinningTechnology)
+                        }
                     }
                     SpecDetailRow("Physical Sensor Size", spec.sensorPhysicalSize)
                     SpecDetailRow("Focal Lengths", spec.focalLengths.joinToString(", ") { "%.2f mm".format(Locale.US, it) })
@@ -1048,3 +1067,99 @@ private fun shareSpecs(context: Context, text: String) {
     val shareIntent = Intent.createChooser(sendIntent, "Share Camera Specifications Report")
     context.startActivity(shareIntent)
 }
+
+@Composable
+private fun PixelBinningExplainerCard() {
+    var isExpanded by remember { mutableStateOf(false) }
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .animateContentSize(),
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E2029)),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFFD600).copy(alpha = 0.35f))
+    ) {
+        Column(
+            modifier = Modifier
+                .clickable { isExpanded = !isExpanded }
+                .padding(14.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFFFFD600).copy(alpha = 0.15f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Sensors,
+                            contentDescription = null,
+                            tint = Color(0xFFFFD600),
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Column {
+                        Text(
+                            text = "50 MP / 100 MP vs 12.5 MP Sensor Matrix",
+                            color = Color(0xFFFFD600),
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "Why do OEM 50MP/100MP cameras output 12.5 MP?",
+                            color = Color.LightGray,
+                            fontSize = 11.sp
+                        )
+                    }
+                }
+                Icon(
+                    imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                    contentDescription = null,
+                    tint = Color.LightGray,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+
+            AnimatedVisibility(
+                visible = isExpanded,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
+                Column(modifier = Modifier.padding(top = 10.dp)) {
+                    HorizontalDivider(color = Color(0xFF2E323E))
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Text(
+                        text = "• Multi-Pixel Super-Pixel Fusion: Smartphone OEMs (Samsung, Xiaomi, Realme, Vivo, Motorola, etc.) advertise the total physical photosite count (48MP, 50MP, 64MP, 108MP, 200MP). In standard shooting, 4 or 9 sub-pixels are fused into 1 larger 'super-pixel' (12.0–12.5 MP) to deliver 4x–9x greater low-light sensitivity and dynamic range.",
+                        color = Color.White.copy(alpha = 0.9f),
+                        fontSize = 11.5.sp,
+                        lineHeight = 16.sp
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "• OEM Camera2 HAL Driver: Android manufacturers restrict raw 50MP/100MP un-binned remosaic streams to their proprietary stock camera app and feed third-party apps the optimized 12.5 MP stream for zero shutter lag and instant HDR.",
+                        color = Color.White.copy(alpha = 0.9f),
+                        fontSize = 11.5.sp,
+                        lineHeight = 16.sp
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "• Aperture Camera Transparency: We report both your phone's advertised sensor matrix tier and the active HAL capture stream so you always know your exact hardware capabilities.",
+                        color = Color(0xFFFFD600).copy(alpha = 0.9f),
+                        fontSize = 11.5.sp,
+                        lineHeight = 16.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+        }
+    }
+}
+

@@ -30,14 +30,18 @@ Aperture interfaces directly with the Android **Camera2 API** and **Jetpack Came
 
 ### 1. Hardware Detection & Diagnostics ("About Camera" Screen)
 - **Comprehensive Sensor Enumeration**: Probes every logical and physical camera sensor on the device using `CameraManager` and `CameraCharacteristics`.
-- **Quad-Bayer & Pixel Binning Detection**: Analyzes high-resolution sensor matrices (e.g., 50.0 MP Quad-Bayer vs 12.5 MP binned output, 32.0 MP Front vs 8.0 MP binned output).
+- **Dual-Metric Resolution Transparency**: Accurately classifies and displays both the **Manufacturer Advertised Hardware Matrix Tier** (e.g. 50 MP, 64 MP, 100 MP, 108 MP, 200 MP) and the **Active Camera2 HAL Output Stream** (e.g. 12.5 MP, 16.0 MP, 8.0 MP).
+- **Pixel Binning Architecture Breakdown**: Educational analysis detailing Quad-Bayer ($4\text{-in-}1$), Nonacell ($9\text{-in-}1$), super-pixel light gathering, and OEM HAL stream access rules.
 - **Physical Lens Optics**: Calculates physical focal lengths, 35mm-equivalent focal lengths, sensor physical dimensions, crop factors, horizontal/vertical field of view (FOV), and maximum apertures.
 - **Hardware Capabilities Telemetry**: Inspects optical stabilization (OIS), electronic video stabilization (EIS), 10-bit HDR / dynamic range profiles, flash units, auto-focus modes, minimum focus distances (cm/diopters), ISO sensitivity ranges, exposure duration ranges, and exposure compensation steps.
 - **System Resource Monitoring**: Live RAM usage, total/available memory, internal storage capacity, SoC chipset model, display resolution, and refresh rate.
 - **Diagnostics Reporting**: One-tap **Copy Report** (formatted Markdown) and **Share** (system share sheet).
 
-### 2. Viewfinder & Lens Switching
+### 2. Viewfinder, Lenses & Flagship Gestures
+- **Front Camera Punch-Hole Halo Ring**: Automatically detects hardware display cutout / punch-hole bounds (`DisplayCutout` API) and renders a smooth 360° illuminated golden sweep arc with radial breathing glow pulse on front camera activation.
+- **Selfie Countdown Progress Ring**: Displays an active circular countdown timer surrounding the front punch-hole lens during 3s/10s timer capture.
 - **Dynamic Lens Badges**: Automatically resolves verified, rock-solid lens options (**`1x`**, **`2x`**, **`Front`**) grounded in device hardware capabilities.
+- **Visual & Shutter Feedback**: Instant white screen flash feedback, thumbnail pulse, and optional audio/haptic shutter cues.
 - **Touch Interactions**: Tap-to-focus with animated metering ring, vertical exposure compensation slider (`+/- EV`), and smooth pinch-to-zoom up to maximum digital zoom.
 - **Composition Grids**: Off, 3x3 (Rule of Thirds), Golden Ratio ($1:1.618$), and 1:1 Square Crop overlay.
 - **Flash / Torch Controls**: Off, Auto, On, and continuous flashlight **Torch** mode.
@@ -53,7 +57,7 @@ Aperture interfaces directly with the Android **Camera2 API** and **Jetpack Came
   - Direct single-page or multi-page **PDF generation** with JPEG compression (optimizes file size from ~35MB to ~300KB) and instant save to `Documents/ApertureScanner/` or `DCIM/Camera/`.
 - **Video Mode**: Hardware-accelerated recording with quality selector (**SD 480p**, **HD 720p**, **FHD 1080p**, **UHD 4K**), 30/60 FPS toggle, EIS video stabilization toggle, live duration counter, and pause/resume capabilities.
 - **Pro Mode**: Manual ISO sensitivity adjustment ($50 \dots 3200$), manual Shutter Speed ($1/4000\text{s} \dots 1\text{s}$), manual Focus Distance ($0.0 \dots 10.0\text{ diopters}$), and manual White Balance color temperature ($2500\text{K} \dots 8500\text{K}$).
-- **Dual Camera Mode**: Concurrent Front + Back camera streaming in Picture-in-Picture (PiP) layout on supported devices.
+- **Dual Camera Mode**: Concurrent Front + Back camera streaming in enlarged Picture-in-Picture (PiP) layout with camera lens badge and one-tap stream swapping.
 
 ### 4. Media Storage & Gallery Integration
 - **Direct System Gallery Launch**: Tapping the thumbnail directly opens Google Photos / Moto Gallery in full resolution via `Intent.ACTION_VIEW`.

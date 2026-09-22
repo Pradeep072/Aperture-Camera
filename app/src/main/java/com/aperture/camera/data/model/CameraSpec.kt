@@ -38,6 +38,8 @@ data class CameraSpec(
     val sensorMegaPixels: Double = 0.0, // Primary advertised / physical MP (e.g. 50.0 MP)
     val binnedOutputMegaPixels: Double = 0.0, // Default pixel-binned output MP (e.g. 12.5 MP)
     val isQuadBayer: Boolean = false,
+    val claimedAdvertisedTier: String = "", // e.g. "50 MP / 100 MP Class (Multi-Pixel Matrix)"
+    val pixelBinningTechnology: String = "", // e.g. "4-in-1 Quad-Bayer / 9-in-1 Nonacell Super-Pixel Fusion"
     val fovHorizontal: Float = 0f,
     val fovVertical: Float = 0f,
     val cropFactor: Float,

@@ -137,6 +137,18 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    fun bindDualCamera(
+        lifecycleOwner: LifecycleOwner,
+        primaryPreviewView: PreviewView,
+        secondaryPreviewView: PreviewView
+    ) {
+        cameraController.bindDualCamera(
+            lifecycleOwner = lifecycleOwner,
+            primarySurfaceProvider = primaryPreviewView.surfaceProvider,
+            secondarySurfaceProvider = secondaryPreviewView.surfaceProvider
+        )
+    }
+
     fun selectLens(badge: LensBadge, lifecycleOwner: LifecycleOwner, previewView: PreviewView) {
         if (_uiState.value.videoRecordingState is VideoRecordingState.RecordingActive) {
             return

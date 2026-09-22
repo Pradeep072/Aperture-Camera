@@ -39,6 +39,44 @@ class MediaStoreRepository(private val context: Context) {
         val displayName = "IMG_${timestamp}.$extension"
         val relativePath = "${Environment.DIRECTORY_DCIM}/Camera"
 
+        // 1. Inject EXIF metadata into JPEG before writing to MediaStore
+        val finalBytes = if (!isRaw) {
+            try {
+                val tempFile = java.io.File.createTempFile("aperture_photo_", ".jpg", context.cacheDir)
+                tempFile.writeBytes(jpegBytes)
+                val exif = ExifInterface(tempFile.absolutePath)
+                exif.setAttribute(ExifInterface.TAG_MAKE, Build.MANUFACTURER)
+                exif.setAttribute(ExifInterface.TAG_MODEL, Build.MODEL)
+                exif.setAttribute(ExifInterface.TAG_SOFTWARE, "Aperture Camera")
+                exif.setAttribute(ExifInterface.TAG_DATETIME, exifDateFormat.format(Date()))
+
+                focalLength?.let { exif.setAttribute(ExifInterface.TAG_FOCAL_LENGTH, "$it/1") }
+                aperture?.let { exif.setAttribute(ExifInterface.TAG_F_NUMBER, "$it") }
+                iso?.let { exif.setAttribute(ExifInterface.TAG_PHOTOGRAPHIC_SENSITIVITY, "$it") }
+                exposureTimeNs?.let {
+                    val sec = it / 1_000_000_000.0
+                    exif.setAttribute(ExifInterface.TAG_EXPOSURE_TIME, "%.6f".format(Locale.US, sec))
+                }
+                location?.let {
+                    try {
+                        exif.setGpsInfo(it)
+                        exif.setLatLong(it.latitude, it.longitude)
+                        if (it.hasAltitude()) {
+                            exif.setAltitude(it.altitude)
+                        }
+                    } catch (_: Exception) { }
+                }
+                exif.saveAttributes()
+                val taggedBytes = tempFile.readBytes()
+                tempFile.delete()
+                taggedBytes
+            } catch (_: Exception) {
+                jpegBytes
+            }
+        } else {
+            jpegBytes
+        }
+
         val values = ContentValues().apply {
             put(MediaStore.Images.Media.DISPLAY_NAME, displayName)
             put(MediaStore.Images.Media.MIME_TYPE, mimeType)
@@ -60,48 +98,8 @@ class MediaStoreRepository(private val context: Context) {
 
         try {
             contentResolver.openOutputStream(uri)?.use { outputStream ->
-                outputStream.write(jpegBytes)
+                outputStream.write(finalBytes)
                 outputStream.flush()
-            }
-
-            // Write EXIF Metadata
-            if (!isRaw) {
-                try {
-                    contentResolver.openFileDescriptor(uri, "rw")?.use { pfd ->
-                        val exif = ExifInterface(pfd.fileDescriptor)
-                        exif.setAttribute(ExifInterface.TAG_MAKE, Build.MANUFACTURER)
-                        exif.setAttribute(ExifInterface.TAG_MODEL, Build.MODEL)
-                        exif.setAttribute(ExifInterface.TAG_SOFTWARE, "Aperture Camera")
-                        exif.setAttribute(ExifInterface.TAG_DATETIME, exifDateFormat.format(Date()))
-
-                        focalLength?.let {
-                            exif.setAttribute(ExifInterface.TAG_FOCAL_LENGTH, "$it/1")
-                        }
-                        aperture?.let {
-                            exif.setAttribute(ExifInterface.TAG_F_NUMBER, "$it")
-                        }
-                        iso?.let {
-                            exif.setAttribute(ExifInterface.TAG_PHOTOGRAPHIC_SENSITIVITY, "$it")
-                        }
-                        exposureTimeNs?.let {
-                            val sec = it / 1_000_000_000.0
-                            exif.setAttribute(ExifInterface.TAG_EXPOSURE_TIME, "%.6f".format(Locale.US, sec))
-                        }
-                        location?.let {
-                            try {
-                                exif.setGpsInfo(it)
-                                exif.setLatLong(it.latitude, it.longitude)
-                                if (it.hasAltitude()) {
-                                    exif.setAltitude(it.altitude)
-                                }
-                            } catch (_: Exception) { }
-                        }
-
-                        exif.saveAttributes()
-                    }
-                } catch (_: Exception) {
-                    // Ignore exif write errors on some restricted devices
-                }
             }
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -113,7 +111,7 @@ class MediaStoreRepository(private val context: Context) {
             uri
         } catch (e: Exception) {
             e.printStackTrace()
-            contentResolver.delete(uri, null, null)
+            try { contentResolver.delete(uri, null, null) } catch (_: Exception) { }
             null
         }
     }

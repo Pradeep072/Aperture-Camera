@@ -75,6 +75,7 @@ import com.aperture.camera.data.model.CaptureMode
 import com.aperture.camera.data.model.FlashModeOption
 import com.aperture.camera.data.model.TimerDuration
 import com.aperture.camera.data.model.VideoQualityOption
+import com.aperture.camera.ui.components.FrontCameraHaloOverlay
 import com.aperture.camera.ui.components.LensSelectorChips
 import com.aperture.camera.ui.components.ModeSelectorBar
 import com.aperture.camera.ui.components.ProControlsPanel
@@ -98,6 +99,8 @@ fun MainCameraScreen(
     val settings by viewModel.settings.collectAsStateWithLifecycle()
 
     var activePreviewView by remember { mutableStateOf<PreviewView?>(null) }
+    val primaryDualPreviewView = remember { PreviewView(context) }
+    val secondaryDualPreviewView = remember { PreviewView(context) }
     var lastBackPressTime by remember { androidx.compose.runtime.mutableLongStateOf(0L) }
 
     // Gallery thumbnail capture pulse animation
@@ -140,8 +143,15 @@ fun MainCameraScreen(
     // Initial camera binding when preview view becomes available or capture mode changes
     LaunchedEffect(uiState.isInitialized, uiState.captureMode, activePreviewView) {
         val pv = activePreviewView
-        if (uiState.isInitialized && uiState.selectedLens != null && pv != null) {
+        if (uiState.isInitialized && uiState.captureMode != CaptureMode.DUAL && uiState.selectedLens != null && pv != null) {
             viewModel.bindCamera(lifecycleOwner, pv)
+        }
+    }
+
+    // Dual camera binding when in DUAL mode
+    LaunchedEffect(uiState.isInitialized, uiState.captureMode, uiState.isDualSupported, primaryDualPreviewView, secondaryDualPreviewView) {
+        if (uiState.isInitialized && uiState.captureMode == CaptureMode.DUAL && uiState.isDualSupported) {
+            viewModel.bindDualCamera(lifecycleOwner, primaryDualPreviewView, secondaryDualPreviewView)
         }
     }
 
@@ -200,37 +210,55 @@ fun MainCameraScreen(
             .fillMaxSize()
             .background(Color(0xFF0D0E11))
     ) {
-        // Center Viewfinder
-        ViewfinderPreview(
-            gridType = settings.gridType,
-            isDocumentMode = uiState.captureMode == CaptureMode.DOCUMENT,
-            zoomRatio = sessionState.zoomRatio,
-            isFocusing = sessionState.isFocusing,
-            focusPoint = sessionState.focusPoint,
-            exposureIndex = sessionState.exposureIndex,
-            exposureRange = sessionState.exposureRange,
-            exposureStep = sessionState.exposureStep,
-            onPreviewViewAvailable = { pv ->
-                activePreviewView = pv
-                if (uiState.isInitialized && uiState.selectedLens != null) {
-                    viewModel.bindCamera(lifecycleOwner, pv)
-                }
-            },
-            onTapToFocus = { x, y, factory ->
-                viewModel.tapToFocus(factory, x, y)
-            },
-            onZoomChange = { zoom ->
-                viewModel.setZoomRatio(zoom)
-            },
-            onExposureChange = { index ->
-                viewModel.setExposureCompensation(index)
-            },
-            modifier = Modifier.fillMaxSize()
-        )
+        // Center Viewfinder (Single camera preview or Dual camera Picture-in-Picture)
+        if (uiState.captureMode == CaptureMode.DUAL) {
+            DualCameraScreen(
+                isConcurrentSupported = uiState.isDualSupported,
+                primaryPreviewView = primaryDualPreviewView,
+                secondaryPreviewView = secondaryDualPreviewView,
+                modifier = Modifier.fillMaxSize()
+            )
+        } else {
+            ViewfinderPreview(
+                gridType = settings.gridType,
+                isDocumentMode = uiState.captureMode == CaptureMode.DOCUMENT,
+                zoomRatio = sessionState.zoomRatio,
+                isFocusing = sessionState.isFocusing,
+                focusPoint = sessionState.focusPoint,
+                exposureIndex = sessionState.exposureIndex,
+                exposureRange = sessionState.exposureRange,
+                exposureStep = sessionState.exposureStep,
+                onPreviewViewAvailable = { pv ->
+                    activePreviewView = pv
+                    if (uiState.isInitialized && uiState.selectedLens != null && uiState.captureMode != CaptureMode.DUAL) {
+                        viewModel.bindCamera(lifecycleOwner, pv)
+                    }
+                },
+                onTapToFocus = { x, y, factory ->
+                    viewModel.tapToFocus(factory, x, y)
+                },
+                onZoomChange = { zoom ->
+                    viewModel.setZoomRatio(zoom)
+                },
+                onExposureChange = { index ->
+                    viewModel.setExposureCompensation(index)
+                },
+                modifier = Modifier.fillMaxSize()
+            )
+        }
 
         // Shutter Screen Flash Overlay (Instantaneous white blink feedback)
         ShutterFlashOverlay(
             triggerTime = uiState.shutterFlashTrigger
+        )
+
+        // Front Camera Punch-Hole Halo Ring & Countdown Overlay
+        val isFrontLens = uiState.selectedLens?.isFront == true && uiState.captureMode != CaptureMode.DUAL
+        FrontCameraHaloOverlay(
+            isFrontCamera = isFrontLens,
+            timerRemainingSeconds = uiState.timerRemainingSeconds,
+            timerTotalSeconds = uiState.timerDuration.seconds,
+            modifier = Modifier.fillMaxSize()
         )
 
         // Top Action Bar Overlay with Status Bar Insets
@@ -302,25 +330,27 @@ fun MainCameraScreen(
             }
         }
 
-        // Lens Badges Selector (0.5x, 1x, 2x, Macro, Front)
-        LensSelectorChips(
-            lensBadges = uiState.dynamicLensBadges,
-            selectedLens = uiState.selectedLens,
-            onSelectLens = { badge ->
-                activePreviewView?.let { pv ->
-                    viewModel.selectLens(badge, lifecycleOwner, pv)
-                }
-            },
-            onFlipCamera = {
-                activePreviewView?.let { pv ->
-                    viewModel.flipCamera(lifecycleOwner, pv)
-                }
-            },
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .navigationBarsPadding()
-                .padding(bottom = 195.dp)
-        )
+        // Lens Badges Selector (0.5x, 1x, 2x, Macro, Front) - shown when not in Dual mode
+        if (uiState.captureMode != CaptureMode.DUAL) {
+            LensSelectorChips(
+                lensBadges = uiState.dynamicLensBadges,
+                selectedLens = uiState.selectedLens,
+                onSelectLens = { badge ->
+                    activePreviewView?.let { pv ->
+                        viewModel.selectLens(badge, lifecycleOwner, pv)
+                    }
+                },
+                onFlipCamera = {
+                    activePreviewView?.let { pv ->
+                        viewModel.flipCamera(lifecycleOwner, pv)
+                    }
+                },
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .navigationBarsPadding()
+                    .padding(bottom = 195.dp)
+            )
+        }
 
         // Pro Controls Panel (when PRO mode is active)
         ProControlsPanel(

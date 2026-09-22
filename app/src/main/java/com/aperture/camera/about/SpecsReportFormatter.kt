@@ -72,13 +72,21 @@ object SpecsReportFormatter {
             sb.appendLine()
             sb.appendLine("#### Optics & Sensor")
             sb.appendLine("- **Lens Classification:** ${spec.lensType.displayName}")
+            if (spec.claimedAdvertisedTier.isNotBlank()) {
+                sb.appendLine("- **Manufacturer Sensor Tier:** ${spec.claimedAdvertisedTier}")
+            }
             if (spec.isQuadBayer) {
-                sb.appendLine("- **Hardware Sensor Matrix:** %.1f MP (%s)".format(Locale.US, spec.sensorMegaPixels, spec.maxPixelArraySize ?: spec.sensorPixelArraySize))
-                sb.appendLine("- **Default Binned Output:** %.1f MP (%s)".format(Locale.US, spec.binnedOutputMegaPixels, spec.sensorPixelArraySize))
-                sb.appendLine("- **Pixel Binning:** 4-in-1 Quad-Bayer Hardware Array")
+                if (spec.sensorMegaPixels > spec.binnedOutputMegaPixels * 1.15) {
+                    sb.appendLine("- **Hardware Sensor Matrix:** %.1f MP (%s)".format(Locale.US, spec.sensorMegaPixels, spec.maxPixelArraySize ?: spec.sensorPixelArraySize))
+                }
+                sb.appendLine("- **Active Camera2 Capture Stream:** %.1f MP (%s)".format(Locale.US, spec.binnedOutputMegaPixels, spec.sensorPixelArraySize))
+                sb.appendLine("- **Pixel Binning Technology:** ${spec.pixelBinningTechnology.ifBlank { "4-in-1 Quad-Bayer Super-Pixel Fusion" }}")
             } else {
                 sb.appendLine("- **Sensor Megapixels:** %.1f MP".format(Locale.US, spec.sensorMegaPixels))
                 sb.appendLine("- **Pixel Array Size:** ${spec.sensorPixelArraySize}")
+                if (spec.pixelBinningTechnology.isNotBlank()) {
+                    sb.appendLine("- **Readout Architecture:** ${spec.pixelBinningTechnology}")
+                }
             }
             sb.appendLine("- **Focal Lengths:** ${spec.focalLengths.joinToString(", ") { "%.2f mm".format(Locale.US, it) }}")
             sb.appendLine("- **35mm Equivalent:** ~%.1f mm".format(Locale.US, spec.focalLength35mm))
