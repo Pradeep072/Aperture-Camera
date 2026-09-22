@@ -1,0 +1,48 @@
+Iris Camera
+Copyright 2026 Pradeep Maurya
+
+This product includes software developed by The Apache Software Foundation (http://www.apache.org/).
+
+=========================================================================
+Third-Party Software Attributions
+=========================================================================
+
+1. Android Open Source Project (AOSP) & AndroidX
+   Copyright (c) The Android Open Source Project
+   Licensed under the Apache License, Version 2.0.
+   - androidx.core:core-ktx
+   - androidx.lifecycle:lifecycle-runtime-ktx
+   - androidx.lifecycle:lifecycle-runtime-compose
+   - androidx.lifecycle:lifecycle-viewmodel-compose
+   - androidx.activity:activity-compose
+   - androidx.compose.ui:ui
+   - androidx.compose.material3:material3
+   - androidx.compose.material:material-icons-extended
+   - androidx.navigation:navigation-compose
+   - androidx.datastore:datastore-preferences
+   - androidx.exifinterface:exifinterface
+
+2. AndroidX CameraX
+   Copyright (c) The Android Open Source Project
+   Licensed under the Apache License, Version 2.0.
+   - androidx.camera:camera-core
+   - androidx.camera:camera-camera2
+   - androidx.camera:camera-lifecycle
+   - androidx.camera:camera-video
+   - androidx.camera:camera-view
+   - androidx.camera:camera-extensions
+
+3. Coil (Coroutine Image Loader)
+   Copyright (c) 2024 Coil Contributors
+   Licensed under the Apache License, Version 2.0.
+   https://github.com/coil-kt/coil
+
+4. Kotlinx Coroutines
+   Copyright 2000-2024 JetBrains s.r.o. and Kotlin Programming Language contributors.
+   Licensed under the Apache License, Version 2.0.
+   https://github.com/Kotlin/kotlinx.coroutines
+
+5. Google Material Components for Android
+   Copyright (c) Google LLC
+   Licensed under the Apache License, Version 2.0.
+   https://github.com/material-components/material-components-android

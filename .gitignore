@@ -1,0 +1,59 @@
+# Built application files
+*.apk
+*.aar
+*.ap_
+*.aab
+
+# Files for the ART/Dalvik VM
+*.dex
+
+# Java class files
+*.class
+
+# Generated files
+bin/
+gen/
+out/
+build/
+app/build/
+
+# Gradle files
+.gradle/
+buildOutput/
+
+# Local configuration file (sdk path, personal paths, API tokens)
+local.properties
+
+# Proguard / R8 mappings
+proguard/
+
+# Android Studio / IntelliJ IDEA navigation & project files
+.idea/
+*.iml
+*.iws
+*.ipr
+.shelf/
+.settings/
+
+# OS specific files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# Keystore files
+*.jks
+*.keystore
+
+# Google Services / Crashlytics keys
+google-services.json
+
+# Capture outputs & test logs
+*.log
+captures/
+.externalNativeBuild/
+.cxx/
