@@ -11,6 +11,7 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.viewModelScope
 import com.aperture.camera.camera.CameraHardwareDetector
 import com.aperture.camera.camera.CameraManagerController
+import com.aperture.camera.camera.CameraSoundAndHapticsManager
 import com.aperture.camera.camera.DeviceHardwareDetector
 import com.aperture.camera.camera.ProSettingsState
 import com.aperture.camera.camera.VideoRecordingState
@@ -44,6 +45,7 @@ data class CameraUiState(
     val timerDuration: TimerDuration = TimerDuration.OFF,
     val timerRemainingSeconds: Int = 0,
     val isCapturingPhoto: Boolean = false,
+    val shutterFlashTrigger: Long = 0L,
     val lastCapturedThumbnail: Bitmap? = null,
     val lastCapturedMediaItem: MediaItem? = null,
     val viewingMediaItem: MediaItem? = null,
@@ -66,6 +68,7 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
     val deviceHardwareDetector = DeviceHardwareDetector(application)
     val cameraController = CameraManagerController(application, mediaStoreRepo)
     val locationHelper = LocationProviderHelper(application)
+    val soundAndHapticsManager = CameraSoundAndHapticsManager(application)
 
     private val _uiState = MutableStateFlow(CameraUiState())
     val uiState: StateFlow<CameraUiState> = _uiState.asStateFlow()
@@ -234,7 +237,12 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     private fun executePhotoCapture() {
-        _uiState.value = _uiState.value.copy(isCapturingPhoto = true)
+        _uiState.value = _uiState.value.copy(
+            isCapturingPhoto = true,
+            shutterFlashTrigger = System.currentTimeMillis()
+        )
+        soundAndHapticsManager.playShutterClick(settings.value.isShutterSoundEnabled)
+
         viewModelScope.launch {
             val location = if (settings.value.isGeotagEnabled) locationHelper.getCurrentLocation() else null
 
@@ -243,8 +251,7 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
                 onPhotoCaptured = { uri, bitmap ->
                     _uiState.value = _uiState.value.copy(
                         isCapturingPhoto = false,
-                        lastCapturedThumbnail = bitmap,
-                        statusToastMessage = "Photo saved to DCIM/Camera"
+                        lastCapturedThumbnail = bitmap
                     )
                     loadLatestMedia()
                 },
@@ -259,7 +266,12 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     private fun executeDocumentCapture() {
-        _uiState.value = _uiState.value.copy(isCapturingPhoto = true)
+        _uiState.value = _uiState.value.copy(
+            isCapturingPhoto = true,
+            shutterFlashTrigger = System.currentTimeMillis()
+        )
+        soundAndHapticsManager.playShutterClick(settings.value.isShutterSoundEnabled)
+
         cameraController.captureDocumentBitmap(
             onBitmapCaptured = { bitmap ->
                 _uiState.value = _uiState.value.copy(
@@ -328,13 +340,14 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
         val recorder = cameraController.videoRecorderManager.currentRecorder ?: return
         val isAudio = settings.value.isAudioEnabled
 
+        soundAndHapticsManager.playStartVideo(settings.value.isShutterSoundEnabled)
+
         cameraController.videoRecorderManager.startRecording(
             recorder = recorder,
             enableAudio = isAudio,
             onEvent = { recordingState ->
                 _uiState.value = _uiState.value.copy(videoRecordingState = recordingState)
                 if (recordingState is VideoRecordingState.Finalized) {
-                    _uiState.value = _uiState.value.copy(statusToastMessage = "Video saved to DCIM/Camera")
                     loadLatestMedia()
                 }
             }
@@ -342,6 +355,7 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun stopVideoRecording() {
+        soundAndHapticsManager.playStopVideo(settings.value.isShutterSoundEnabled)
         cameraController.videoRecorderManager.stopRecording()
     }
 
@@ -439,6 +453,7 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
 
     override fun onCleared() {
         super.onCleared()
+        soundAndHapticsManager.release()
         locationHelper.stopLocationUpdates()
         cameraController.release()
     }

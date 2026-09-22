@@ -7,7 +7,12 @@ import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.camera.view.PreviewView
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -73,6 +78,7 @@ import com.aperture.camera.data.model.VideoQualityOption
 import com.aperture.camera.ui.components.LensSelectorChips
 import com.aperture.camera.ui.components.ModeSelectorBar
 import com.aperture.camera.ui.components.ProControlsPanel
+import com.aperture.camera.ui.components.ShutterFlashOverlay
 import com.aperture.camera.ui.components.TimerCountdownOverlay
 import com.aperture.camera.ui.components.VideoControlsTopBar
 import com.aperture.camera.ui.components.VideoRecordingActiveBanner
@@ -93,6 +99,24 @@ fun MainCameraScreen(
 
     var activePreviewView by remember { mutableStateOf<PreviewView?>(null) }
     var lastBackPressTime by remember { androidx.compose.runtime.mutableLongStateOf(0L) }
+
+    // Gallery thumbnail capture pulse animation
+    val thumbnailScale = remember { Animatable(1f) }
+    LaunchedEffect(uiState.lastCapturedMediaItem?.uri) {
+        if (uiState.lastCapturedMediaItem != null) {
+            thumbnailScale.animateTo(
+                targetValue = 1.16f,
+                animationSpec = tween(durationMillis = 100, easing = FastOutSlowInEasing)
+            )
+            thumbnailScale.animateTo(
+                targetValue = 1.0f,
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessMedium
+                )
+            )
+        }
+    }
 
     // Double-back to exit handling
     BackHandler(enabled = true) {
@@ -121,7 +145,7 @@ fun MainCameraScreen(
         }
     }
 
-    // Handle toast messages
+    // Handle toast messages (only errors or explicit actions)
     LaunchedEffect(uiState.statusToastMessage) {
         uiState.statusToastMessage?.let { msg ->
             Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
@@ -202,6 +226,11 @@ fun MainCameraScreen(
                 viewModel.setExposureCompensation(index)
             },
             modifier = Modifier.fillMaxSize()
+        )
+
+        // Shutter Screen Flash Overlay (Instantaneous white blink feedback)
+        ShutterFlashOverlay(
+            triggerTime = uiState.shutterFlashTrigger
         )
 
         // Top Action Bar Overlay with Status Bar Insets
@@ -340,6 +369,7 @@ fun MainCameraScreen(
                 Box(
                     modifier = Modifier
                         .size(52.dp)
+                        .scale(thumbnailScale.value)
                         .clip(RoundedCornerShape(12.dp))
                         .background(Color(0xFF22252E))
                         .border(1.5.dp, Color.White.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
